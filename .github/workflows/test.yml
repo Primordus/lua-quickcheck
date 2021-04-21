@@ -13,34 +13,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lua-version: ['lua=5.1', 'lua=5.1', 'luajit=2.0', 'luajit=2.1']
-
-    env:
-      LUA: ${{ matrix.lua-version }}
+        lua-version: ['lua=5.1', 'lua=5.2', 'luajit=2.0', 'luajit=2.1']
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: setup hererocks $LUA
+    - name: set up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: setup hererocks ${{ matrix.lua-version }}
       run: |
-        - pip install hererocks
-        - hererocks lua_install -r^ --$LUA
-        - echo "$PWD/lua_install/bin" >> $GITHUB_PATH
+        python -m pip install --upgrade pip
+        pip install --user hererocks
+        hererocks lua_install -r^ --${{ matrix.lua-version }} --verbose
+        echo "${PWD}/lua_install/bin" | tee -a $GITHUB_PATH
 
     - name: setup dependencies
       run: |
-        - luarocks install argparse
-        - luarocks install luafilesystem
-        - luarocks install luacheck
-        - luarocks install luacov
-        - luarocks install luacov-coveralls
-        - luarocks install busted
-        - luarocks install lanes
-        - luarocks install moonscript
-        - if [[ $(echo $LUA | grep -o "jit") = "" ]]; then luarocks install luaffi --server=http://luarocks.org/dev; fi
+        luarocks install argparse
+        luarocks install luafilesystem
+        luarocks install luacheck
+        luarocks install luacov
+        luarocks install luacov-coveralls
+        luarocks install busted
+        luarocks install lanes
+        luarocks install moonscript
+        if [[ $(echo ${{ matrix.lua-version }} | grep -o "jit") = "" ]]; then luarocks install luaffi --server=http://luarocks.org/dev; fi
 
     - name: run regression tests
-      run: LUA=$LUA make -e tests
+      run: LUA=${{ matrix.lua-version }} make -e tests
 
     - name: upload code coverage
       if: ${{ success() }}
